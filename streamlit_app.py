@@ -24,6 +24,32 @@ def load_and_process():
 
 df = load_and_process()
 
+# Filtrare avansată
+st.sidebar.header("🔍 Filtrare avansată")
+
+# --- Vârstă: input numeric minim și maxim ---
+min_age = int(df["age"].min())
+max_age = int(df["age"].max())
+
+min_age_input = st.sidebar.number_input("Vârstă minimă:", min_value=min_age, max_value=max_age, value=min_age, step=1)
+max_age_input = st.sidebar.number_input("Vârstă maximă:", min_value=min_age, max_value=max_age, value=max_age, step=1)
+
+# --- Selectare sex ---
+sex_options = df["sex"].dropna().unique().tolist()
+selected_sex = st.sidebar.selectbox("Sex:", ["Toate"] + sex_options)
+
+# --- BMI: input numeric minim și maxim ---
+bmi_valid = df["bmi"].dropna()
+bmi_valid = bmi_valid[(bmi_valid != float('inf')) & (bmi_valid != float('-inf'))]
+
+min_bmi = float(bmi_valid.min())
+max_bmi = float(bmi_valid.max())
+
+min_bmi_input = st.sidebar.number_input("BMI minim:", min_value=min_bmi, max_value=max_bmi, value=min_bmi, format="%.2f")
+max_bmi_input = st.sidebar.number_input("BMI maxim:", min_value=min_bmi, max_value=max_bmi, value=max_bmi, format="%.2f")
+
+# --- Checkbox pentru AI anomaly ---
+only_ai_anomalies = st.sidebar.checkbox("✅ Afișează doar anomaliile AI")
 
 # Selectare tip de date afișate
 filt = st.radio(
@@ -42,6 +68,20 @@ elif filt == "Vârstnici obezi suspecți":
     df_show = df[df["suspect_elderly_obese"]]
 else:
     df_show = df
+
+# 🔽 Aplică filtrele din sidebar asupra datelor afișate
+df_show = df_show[
+    (df_show["age"] >= min_age_input) & (df_show["age"] <= max_age_input) &
+    (df_show["bmi"] >= min_bmi_input) & (df_show["bmi"] <= max_bmi_input)
+]
+
+
+if selected_sex != "Toate":
+    df_show = df_show[df_show["sex"] == selected_sex]
+
+if only_ai_anomalies:
+    df_show = df_show[df_show["ai_anomaly"] == True]
+
 
 # Afișare tabel
 st.subheader("📊 Tabelul cu date")
@@ -133,4 +173,16 @@ fig_height = px.histogram(
 )
 st.plotly_chart(fig_height, use_container_width=True)
 
+# ---------------------------------------------------
+# 📥 Export date filtrate ca fișier CSV
+st.subheader("⬇️ Export date filtrate")
+
+csv = df_show.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="💾 Descarcă ca CSV",
+    data=csv,
+    file_name="date_filtrate.csv",
+    mime="text/csv"
+)
 
